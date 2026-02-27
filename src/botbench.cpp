@@ -25,6 +25,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <atomic>
 #include <thread>
 #include <iostream>
+#include <cstdlib>
 
 #include <SDL.h>
 
@@ -46,18 +47,23 @@ struct DuelResult {
 	int Duration;
 };
 
-DuelResult duel(std::string left, std::string right, bool verbose=false);
+DuelResult duel(std::string left, std::string right, int max_ticks, bool verbose=false);
 void present(const DuelResult& result);
 
 int main(int argc, char* argv[])
 {
 	if(argc < 3) {
-		std::cerr << "Usage: " << argv[0] << " [LEFT] [RIGHT]\n";
+		std::cerr << "Usage: " << argv[0] << " [LEFT] [RIGHT] [MAX_TICKS (optional)]\n";
 		return EXIT_FAILURE;
 	}
 
 	std::string left_bot = argv[1];
 	std::string right_bot = argv[2];
+
+	int max_ticks = -1;
+    if (argc >= 4) {
+        max_ticks = std::atoi(argv[3]);
+    }
 
 	FileSystem filesys(argv[0]);
 	filesys.setWriteDir("/tmp");
@@ -68,7 +74,7 @@ int main(int argc, char* argv[])
 
 	try
 	{
-		auto result = duel( left_bot, right_bot, true );
+		auto result = duel( left_bot, right_bot, max_ticks, true );
 		present( result );
 	} catch (const boost::exception& ex) {
 		// error handling
@@ -83,7 +89,7 @@ int main(int argc, char* argv[])
 }
 
 
-DuelResult duel(std::string left, std::string right, bool verbose) {
+DuelResult duel(std::string left, std::string right, int max_ticks, bool verbose) {
 	DuelMatch match{false, "default.lua"};
 	auto leftInput = std::make_shared<ScriptedInputSource>("scripts/" + left, LEFT_PLAYER, 0, &match);
 	auto rightInput = std::make_shared<ScriptedInputSource>("scripts/" + right, RIGHT_PLAYER, 0, &match);
@@ -111,7 +117,7 @@ DuelResult duel(std::string left, std::string right, bool verbose) {
 		}
 
 		// stop at 12 hours
-		if(timer > 75 * 60 * 60 * 12) {
+		if(max_ticks > 0 && timer >= max_ticks || max_ticks <= 0 && timer > 75 * 60 * 60 * 12) {
 			break;
 		}
 	}
